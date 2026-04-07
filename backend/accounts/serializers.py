@@ -38,12 +38,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token['role'] = user.role
+        # If user is superuser, set role to 'admin'
+        user_role = 'admin' if user.is_superuser else user.role
+        token['role'] = user_role
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        data['role'] = self.user.role
+        # If user is superuser, set role to 'admin'
+        user_role = 'admin' if self.user.is_superuser else self.user.role
+        data['role'] = user_role
         return data
 
 class EmailTokenObtainPairSerializer(serializers.Serializer):
@@ -62,14 +66,20 @@ class EmailTokenObtainPairSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError({'email': ['User account is disabled.']})
         refresh = RefreshToken.for_user(user)
+        
+        # If user is superuser, set role to 'admin'
+        user_role = 'admin' if user.is_superuser else user.role
+        
         return {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
-            'role': user.role,
+            'role': user_role,
             'username': user.username,
         }
 
 class UserSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    
     class Meta:
         model = CustomUser
         fields = ['id', 'username', 'email', 'role', 'specialization']
@@ -77,3 +87,9 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'specialization': {'required': False, 'allow_blank': True}
         }
+    
+    def get_role(self, obj):
+        # If user is superuser, return 'admin'
+        if obj.is_superuser:
+            return 'admin'
+        return obj.role

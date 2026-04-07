@@ -156,12 +156,21 @@ class DoctorSerializer(serializers.ModelSerializer):
         if user_data:
             user = instance.user
             
-            # Update user fields
-            for field in ['username', 'email', 'first_name', 'last_name']:
-                if field in user_data:
-                    value = user_data.get(field)
-                    if value is not None:  # Allow empty strings but not None
-                        setattr(user, field, value)
+            # Handle full_name by splitting into first_name and last_name
+            # This handles cases where frontend sends full_name
+            if 'username' in user_data or 'email' in user_data:
+                for field in ['username', 'email']:
+                    if field in user_data:
+                        value = user_data.get(field)
+                        if value is not None:
+                            setattr(user, field, value)
+            
+            if 'first_name' in user_data or 'last_name' in user_data:
+                for field in ['first_name', 'last_name']:
+                    if field in user_data:
+                        value = user_data.get(field)
+                        if value is not None:
+                            setattr(user, field, value)
             
             try:
                 user.save()
@@ -170,7 +179,7 @@ class DoctorSerializer(serializers.ModelSerializer):
 
         # Update Doctor model fields
         for attr, value in validated_data.items():
-            if value is not None:  # Allow empty strings but not None
+            if value is not None and attr not in ['full_name']:  # Skip full_name as it's computed
                 setattr(instance, attr, value)
         
         try:

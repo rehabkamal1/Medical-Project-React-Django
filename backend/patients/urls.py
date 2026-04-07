@@ -1,19 +1,19 @@
 # patients/urls.py
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
-    PatientListView,
-    PatientCreateView,
-    PatientDetailView,
-    PatientUpdateView,
+    PatientViewSet,
     PatientProfileView,
     PatientApprovalView
 )
 
+router = DefaultRouter()
+router.register(r'', PatientViewSet, basename='patient')
+
 urlpatterns = [
-    path('', PatientListView.as_view(), name='patient-list'),
-    path('create/', PatientCreateView.as_view(), name='patient-create'),
-    path('<int:pk>/', PatientDetailView.as_view(), name='patient-detail'),
-    path('<int:pk>/update/', PatientUpdateView.as_view(), name='patient-update'),
+    # Special routes first (to avoid conflicts with router)
     path('profile/', PatientProfileView.as_view(), name='patient-profile'),
     path('<int:pk>/<str:action>/', PatientApprovalView.as_view(), name='patient-approval'),
+    # Then the router (which handles /, /<id>/, etc.)
+    path('', include(router.urls)),
 ]

@@ -39,7 +39,7 @@ class LoginView(APIView):
             return Response({
                 'refresh': data.get('refresh'),
                 'access': data.get('access'),
-                'role': data.get('role'),
+                'role': data.get('role'),  # This now correctly includes 'admin' for superuser
             }, status=200)
         return Response(serializer.errors, status=400)
 

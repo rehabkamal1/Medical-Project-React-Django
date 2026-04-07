@@ -36,9 +36,16 @@ class AdminSystemAlertSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AdminNotificationSerializer(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format="%m/%d/%Y, %H:%M:%S")
+    
     class Meta:
         model = AdminNotification
-        fields = '__all__'
+        fields = [
+            'id', 'recipient_email', 'message', 'type', 
+            'patient_name', 'doctor_name', 'appointment_date',
+            'created_at', 'is_read'
+        ]
+        read_only_fields = ['created_at', 'id']
 
 class AdminActivityLogSerializer(serializers.ModelSerializer):
     class Meta:

@@ -27,7 +27,7 @@ class IsDoctor(permissions.BasePermission):
 
 class IsDoctorOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (request.user.role == 'doctor' or request.user.is_staff)
+        return request.user.is_authenticated and (request.user.role == 'doctor' and  request.user.role == 'admin')
 
 class DoctorViewSet(viewsets.ModelViewSet):
     queryset = Doctor.objects.all()
@@ -40,7 +40,8 @@ class DoctorViewSet(viewsets.ModelViewSet):
         doctor.is_approved = True
         doctor.is_blocked = False
         doctor.save()
-        return Response({'status': 'approved'})
+        serializer = self.get_serializer(doctor)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def block(self, request, pk=None):
@@ -48,14 +49,16 @@ class DoctorViewSet(viewsets.ModelViewSet):
         doctor.is_blocked = True
         doctor.is_approved = False
         doctor.save()
-        return Response({'status': 'blocked'})
+        serializer = self.get_serializer(doctor)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def unblock(self, request, pk=None):
         doctor = self.get_object()
         doctor.is_blocked = False
         doctor.save()
-        return Response({'status': 'unblocked'})
+        serializer = self.get_serializer(doctor)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class AppointmentListView(generics.ListAPIView):
     serializer_class = AppointmentSerializer

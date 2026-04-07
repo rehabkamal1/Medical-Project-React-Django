@@ -8,6 +8,7 @@ from .views import (
     AdminSystemAlertViewSet,
     AdminNotificationViewSet,
     AdminActivityLogViewSet,
+    AdminProfileView,
 )
 
 router = DefaultRouter()
@@ -21,5 +22,6 @@ router.register(r'notifications', AdminNotificationViewSet, basename='admin-noti
 router.register(r'activity-logs', AdminActivityLogViewSet, basename='admin-activity-log')
 
 urlpatterns = [
+    path('profile/', AdminProfileView.as_view(), name='admin-profile'),
     path('', include(router.urls)),
 ]

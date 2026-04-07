@@ -56,13 +56,28 @@ class AdminSystemAlert(models.Model):
 
 # Notifications
 class AdminNotification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('appointment_reminder', 'Appointment Reminder'),
+        ('booking_confirmation', 'Booking Confirmation'),
+        ('booking_pending', 'Booking Pending'),
+        ('booking_rejected', 'Booking Rejected'),
+        ('general', 'General'),
+    ]
+    
     recipient_email = models.EmailField()
     message = models.TextField()
+    type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES, default='general')
+    patient_name = models.CharField(max_length=255, blank=True, null=True)
+    doctor_name = models.CharField(max_length=255, blank=True, null=True)
+    appointment_date = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
-        return f"To: {self.recipient_email}"
+        return f"{self.type} - To: {self.recipient_email}"
 
 # Admin Activity Logs
 class AdminActivityLog(models.Model):

@@ -19,10 +19,11 @@ class PatientSerializer(serializers.ModelSerializer):
         model = Patient
         fields = [
             'id', 'user', 'full_name', 'email', 'phone', 'address', 
-            'age', 'gender', 'blood_type', 'allergies', 
-            'medical_history', 'created_at', 'updated_at'
+            'age', 'date_of_birth', 'gender', 'blood_type', 'allergies', 
+            'medical_history', 'is_approved', 'is_blocked',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at', 'is_approved', 'is_blocked']
 
     def get_full_name(self, obj):
         return obj.user.get_full_name()
@@ -31,10 +32,10 @@ class PatientSerializer(serializers.ModelSerializer):
         return obj.user.email
 
 class PatientCreateUpdateSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(write_only=True)
-    last_name = serializers.CharField(write_only=True)
-    email = serializers.EmailField(write_only=True)
-    password = serializers.CharField(write_only=True)
+    first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    email = serializers.EmailField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Patient
@@ -43,12 +44,25 @@ class PatientCreateUpdateSerializer(serializers.ModelSerializer):
             'phone', 'address', 'age', 'gender', 'blood_type',
             'allergies', 'medical_history'
         ]
+        extra_kwargs = {
+            'phone': {'required': False, 'allow_blank': True},
+            'address': {'required': False, 'allow_blank': True},
+            'age': {'required': False, 'allow_null': True},
+            'gender': {'required': False, 'allow_blank': True},
+            'blood_type': {'required': False, 'allow_blank': True},
+            'allergies': {'required': False, 'allow_blank': True},
+            'medical_history': {'required': False, 'allow_blank': True},
+        }
 
     def create(self, validated_data):
+        # For CREATE, password is required
+        if 'password' not in validated_data or not validated_data['password']:
+            raise serializers.ValidationError({'password': 'Password is required when creating a patient.'})
+            
         user_data = {
-            'first_name': validated_data.pop('first_name'),
-            'last_name': validated_data.pop('last_name'),
-            'email': validated_data.pop('email'),
+            'first_name': validated_data.pop('first_name', ''),
+            'last_name': validated_data.pop('last_name', ''),
+            'email': validated_data.pop('email', ''),
             'password': validated_data.pop('password'),
             'role': 'patient'
         }
@@ -60,19 +74,25 @@ class PatientCreateUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         user = instance.user
         
+        # Update user fields only if provided
         if 'first_name' in validated_data:
             user.first_name = validated_data.pop('first_name')
         if 'last_name' in validated_data:
             user.last_name = validated_data.pop('last_name')
         if 'email' in validated_data:
             user.email = validated_data.pop('email')
-        if 'password' in validated_data:
+        if 'password' in validated_data and validated_data['password']:
             user.set_password(validated_data.pop('password'))
+        else:
+            # Remove password from validated_data if empty
+            validated_data.pop('password', None)
             
         user.save()
         
+        # Update patient fields only if provided
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if value is not None:
+                setattr(instance, attr, value)
             
         instance.save()
         return instance
