@@ -44,13 +44,13 @@ export default function AdminDoctorApproval() {
     const token = getAuthToken();
     return {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     };
   };
 
   const fetchDoctors = async () => {
     try {
-      setLoading(prev => ({...prev, general: true}));
+      setLoading((prev) => ({ ...prev, general: true }));
       const response = await axios.get(`${API_URL}/doctors/`, {
         headers: getAuthHeaders(),
       });
@@ -58,13 +58,13 @@ export default function AdminDoctorApproval() {
     } catch (error) {
       handleApiError(error, "Failed to fetch doctors");
     } finally {
-      setLoading(prev => ({...prev, general: false}));
+      setLoading((prev) => ({ ...prev, general: false }));
     }
   };
 
   const handleApiError = (error, defaultMessage) => {
     console.error("API Error:", error);
-    
+
     let errorMessage = defaultMessage;
     if (error.response) {
       if (error.response.status === 403) {
@@ -96,15 +96,22 @@ export default function AdminDoctorApproval() {
 
   const handleApproveDoctor = async (id) => {
     try {
-      setLoading(prev => ({...prev, approve: true}));
+      setLoading((prev) => ({ ...prev, approve: true }));
       const response = await axios.post(
         `${API_URL}/doctors/${id}/approve/`,
         {},
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
       );
-      
+
       if (response.status === 200) {
-        await fetchDoctors();
+        // Update the doctor in the state directly
+        setDoctors(
+          doctors.map((doc) =>
+            doc.id === id
+              ? { ...doc, is_approved: true, is_blocked: false }
+              : doc,
+          ),
+        );
         setSnackbar({
           open: true,
           message: "Doctor approved successfully",
@@ -114,21 +121,28 @@ export default function AdminDoctorApproval() {
     } catch (error) {
       handleApiError(error, "Failed to approve doctor");
     } finally {
-      setLoading(prev => ({...prev, approve: false}));
+      setLoading((prev) => ({ ...prev, approve: false }));
     }
   };
 
   const handleBlockDoctor = async (id) => {
     try {
-      setLoading(prev => ({...prev, block: true}));
+      setLoading((prev) => ({ ...prev, block: true }));
       const response = await axios.post(
         `${API_URL}/doctors/${id}/block/`,
         {},
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
       );
-      
+
       if (response.status === 200) {
-        await fetchDoctors();
+        // Update the doctor in the state directly
+        setDoctors(
+          doctors.map((doc) =>
+            doc.id === id
+              ? { ...doc, is_blocked: true, is_approved: false }
+              : doc,
+          ),
+        );
         setSnackbar({
           open: true,
           message: "Doctor blocked successfully",
@@ -138,7 +152,7 @@ export default function AdminDoctorApproval() {
     } catch (error) {
       handleApiError(error, "Failed to block doctor");
     } finally {
-      setLoading(prev => ({...prev, block: false}));
+      setLoading((prev) => ({ ...prev, block: false }));
     }
   };
 
@@ -198,22 +212,24 @@ export default function AdminDoctorApproval() {
                     <TableCell>{doctor.full_name}</TableCell>
                     <TableCell>{doctor.user?.email || "Not Set"}</TableCell>
                     <TableCell>{doctor.phone || "Not Set"}</TableCell>
-                    <TableCell>{getSpecialtyName(doctor.specialization)}</TableCell>
+                    <TableCell>
+                      {getSpecialtyName(doctor.specialization)}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={
                           doctor.is_blocked
                             ? "Blocked"
                             : doctor.is_approved
-                            ? "Approved"
-                            : "Pending"
+                              ? "Approved"
+                              : "Pending"
                         }
                         color={
                           doctor.is_blocked
                             ? "error"
                             : doctor.is_approved
-                            ? "success"
-                            : "warning"
+                              ? "success"
+                              : "warning"
                         }
                       />
                     </TableCell>
@@ -225,7 +241,9 @@ export default function AdminDoctorApproval() {
                           size="small"
                           onClick={() => handleApproveDoctor(doctor.id)}
                           disabled={loading.approve}
-                          startIcon={loading.approve && <CircularProgress size={20} />}
+                          startIcon={
+                            loading.approve && <CircularProgress size={20} />
+                          }
                           sx={{ mr: 1 }}
                         >
                           Approve
@@ -238,7 +256,9 @@ export default function AdminDoctorApproval() {
                           size="small"
                           onClick={() => handleBlockDoctor(doctor.id)}
                           disabled={loading.block}
-                          startIcon={loading.block && <CircularProgress size={20} />}
+                          startIcon={
+                            loading.block && <CircularProgress size={20} />
+                          }
                         >
                           Block
                         </Button>
@@ -250,7 +270,9 @@ export default function AdminDoctorApproval() {
                           size="small"
                           onClick={() => handleApproveDoctor(doctor.id)}
                           disabled={loading.approve}
-                          startIcon={loading.approve && <CircularProgress size={20} />}
+                          startIcon={
+                            loading.approve && <CircularProgress size={20} />
+                          }
                         >
                           Unblock
                         </Button>
@@ -282,10 +304,10 @@ export default function AdminDoctorApproval() {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
+        <Alert
+          onClose={handleSnackbarClose}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>

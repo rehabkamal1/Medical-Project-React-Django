@@ -63,10 +63,32 @@ const PatientList = () => {
     message: "",
   });
 
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const validatePhone = (phone) => /^[0-9]{10,15}$/.test(phone);
+  const validateEmail = (email) => {
+    if (!email) return true; // Allow empty email in edit mode
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone) return true; // Allow empty phone in edit mode
+    return /^[0-9]{10,15}$/.test(phone);
+  };
 
   const validateForm = () => {
+    // In edit mode, all fields are optional
+    if (editingPatient) {
+      // Only validate format of fields that are provided
+      const newErrors = {};
+      if (form.email && !validateEmail(form.email)) {
+        newErrors.email = "Invalid email format";
+      }
+      if (form.phone && !validatePhone(form.phone)) {
+        newErrors.phone = "Invalid phone number";
+      }
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    }
+
+    // In create mode, validation is stricter
     const newErrors = {};
     if (!form.first_name.trim())
       newErrors.first_name = "First name is required";
@@ -127,7 +149,7 @@ const PatientList = () => {
   const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
   const currentPatients = patients.slice(
     indexOfFirstPatient,
-    indexOfLastPatient
+    indexOfLastPatient,
   );
   const totalPages = Math.ceil(patients.length / patientsPerPage);
 
@@ -300,7 +322,7 @@ const PatientList = () => {
         {
           method: "DELETE",
           headers,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -383,9 +405,8 @@ const PatientList = () => {
                   {patient.gender === "M"
                     ? "Male"
                     : patient.gender === "F"
-                    ? "Female"
-                      : "Not Set"
-                  }
+                      ? "Female"
+                      : "Not Set"}
                 </TableCell>
                 <TableCell>
                   <Tooltip title="View Details">
@@ -449,7 +470,7 @@ const PatientList = () => {
 
           <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
             <TextField
-              label="First Name *"
+              label={`First Name ${!editingPatient ? "*" : ""}`}
               name="first_name"
               value={form.first_name}
               onChange={(e) => setForm({ ...form, first_name: e.target.value })}
@@ -459,7 +480,7 @@ const PatientList = () => {
               margin="normal"
             />
             <TextField
-              label="Last Name *"
+              label={`Last Name ${!editingPatient ? "*" : ""}`}
               name="last_name"
               value={form.last_name}
               onChange={(e) => setForm({ ...form, last_name: e.target.value })}
@@ -485,7 +506,7 @@ const PatientList = () => {
           </Box>
 
           <TextField
-            label="Email *"
+            label={`Email ${!editingPatient ? "*" : ""}`}
             name="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -496,7 +517,7 @@ const PatientList = () => {
           />
 
           <TextField
-            label="Phone *"
+            label={`Phone ${!editingPatient ? "*" : ""}`}
             name="phone"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -525,7 +546,7 @@ const PatientList = () => {
           </Box>
 
           <TextField
-            label="Address *"
+            label={`Address ${!editingPatient ? "*" : ""}`}
             name="address"
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}

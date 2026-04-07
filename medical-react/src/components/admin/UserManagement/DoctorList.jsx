@@ -36,7 +36,6 @@ const getAuthToken = () => {
 
 const DoctorsList = () => {
   const [doctors, setDoctors] = useState([]);
-  const [specialties, setSpecialties] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -45,8 +44,21 @@ const DoctorsList = () => {
   const [errors, setErrors] = useState({});
   const doctorsPerPage = 5;
   const navigate = useNavigate();
+
+  // Hardcoded specialization choices from Doctor model
+  const SPECIALIZATION_CHOICES = [
+    { value: "General", label: "General" },
+    { value: "Lungs Specialist", label: "Lungs Specialist" },
+    { value: "Dentist", label: "Dentist" },
+    { value: "Psychiatrist", label: "Psychiatrist" },
+    { value: "Covid-19", label: "Covid-19" },
+    { value: "Surgeon", label: "Surgeon" },
+    { value: "Cardiologist", label: "Cardiologist" },
+  ];
+
   const [form, setForm] = useState({
-    full_name: "",
+    first_name: "",
+    last_name: "",
     username: "",
     email: "",
     phone: "",
@@ -66,7 +78,9 @@ const DoctorsList = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!form.full_name.trim()) newErrors.full_name = "Full name is required";
+    if (!form.first_name.trim())
+      newErrors.first_name = "First name is required";
+    if (!form.last_name.trim()) newErrors.last_name = "Last name is required";
     if (!form.username.trim()) newErrors.username = "Username is required";
     if (!validateEmail(form.email)) newErrors.email = "Invalid email format";
     if (form.phone && !validatePhone(form.phone))
@@ -83,12 +97,12 @@ const DoctorsList = () => {
         Authorization: `Bearer ${token}`,
       };
 
-      const [doctorsRes, specialtiesRes] = await Promise.all([
-        fetch("http://127.0.0.1:8000/api/doctor/doctors/", { headers }),
-        fetch("http://127.0.0.1:8000/api/admin/specialties/", { headers }),
-      ]);
+      const doctorsRes = await fetch(
+        "http://127.0.0.1:8000/api/doctor/doctors/",
+        { headers },
+      );
 
-      if (doctorsRes.status === 401 || specialtiesRes.status === 401) {
+      if (doctorsRes.status === 401) {
         setSnackbar({
           open: true,
           message: "Session expired. Please login again.",
@@ -99,10 +113,7 @@ const DoctorsList = () => {
       }
 
       const doctorsData = await doctorsRes.json();
-      const specialtiesData = await specialtiesRes.json();
-
       setDoctors(doctorsData);
-      setSpecialties(specialtiesData);
     } catch (error) {
       setSnackbar({
         open: true,
@@ -145,7 +156,6 @@ const DoctorsList = () => {
     setForm({
       first_name: doctor.user.first_name || "",
       last_name: doctor.user.last_name || "",
-      full_name: doctor.full_name || "",
       username: doctor.user?.username || "",
       email: doctor.user?.email || "",
       phone: doctor.phone || "",
@@ -184,37 +194,48 @@ const DoctorsList = () => {
       const method = editingDoctor ? "PUT" : "POST";
 
       const headers = {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       };
 
+      // If updating and image is base64, skip image from JSON
+      // If image is a file, use FormData
+      let body;
+
       const requestData = {
-        full_name: form.full_name,
         user: {
           username: form.username,
           email: form.email,
+          first_name: form.first_name || "",
+          last_name: form.last_name || "",
         },
         specialization: form.specialization,
-        phone: form.phone,
-        bio: form.bio,
-        address: form.address,
-        image: form.image,
+        phone: form.phone || "",
+        bio: form.bio || "",
+        address: form.address || "",
       };
 
       if (!editingDoctor) {
         requestData.user.password = form.phone || "defaultPassword123";
       }
 
+      // Don't include image in JSON - it might cause issues with base64
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(requestData);
+
       const response = await fetch(url, {
         method,
         headers,
-        body: JSON.stringify(requestData),
+        body,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Error response:", errorData);
         throw new Error(
-          errorData.message || "Failed to save doctor. Please try again."
+          errorData.detail ||
+            errorData.message ||
+            JSON.stringify(errorData) ||
+            "Failed to save doctor. Please try again.",
         );
       }
 
@@ -228,6 +249,7 @@ const DoctorsList = () => {
         severity: "success",
       });
     } catch (error) {
+      console.error("Save error:", error);
       setSnackbar({
         open: true,
         message: error.message || "Failed to save doctor",
@@ -254,7 +276,7 @@ const DoctorsList = () => {
         {
           method: "DELETE",
           headers,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -293,9 +315,11 @@ const DoctorsList = () => {
 
   const getSpecialtyName = (specialization) => {
     if (!specialization) return "Without specialization";
-    const specialty = specialties.find((s) => s.name === specialization);
+    const specialty = SPECIALIZATION_CHOICES.find(
+      (s) => s.value === specialization,
+    );
     return specialty
-      ? specialty.name
+      ? specialty.label
       : specialization || "Without specialization";
   };
 
@@ -471,9 +495,9 @@ const DoctorsList = () => {
               label="Specialty"
             >
               <MenuItem value="">Without specialization</MenuItem>
-              {specialties.map((spec) => (
-                <MenuItem key={spec.id} value={spec.name}>
-                  {spec.name}
+              {SPECIALIZATION_CHOICES.map((spec) => (
+                <MenuItem key={spec.value} value={spec.value}>
+                  {spec.label}
                 </MenuItem>
               ))}
             </Select>

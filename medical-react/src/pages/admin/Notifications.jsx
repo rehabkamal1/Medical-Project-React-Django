@@ -54,7 +54,7 @@ const Notifications = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.status === 401) {
@@ -71,28 +71,27 @@ const Notifications = () => {
 
       const data = await response.json();
       const processedNotifications = data.map((notification) => {
-        if (notification.type === "booking_confirmation") {
-          return {
-            ...notification,
-            message: `Booking confirmed with Dr. ${notification.doctor_name} on ${notification.date} at ${notification.time}`,
-          };
+        // Use patient_name and doctor_name from backend if available
+        const patientName = notification.patient_name || "Unknown Patient";
+        const doctorName = notification.doctor_name || "Unknown Doctor";
+
+        let processedMessage = notification.message;
+
+        // Format message based on type
+        if (notification.type === "appointment_reminder") {
+          processedMessage = `${patientName} has an appointment with Dr. ${doctorName}`;
+        } else if (notification.type === "booking_confirmation") {
+          processedMessage = `${patientName}'s booking confirmed with Dr. ${doctorName}`;
         } else if (notification.type === "booking_pending") {
-          return {
-            ...notification,
-            message: `Booking request sent to Dr. ${notification.doctor_name} for ${notification.date}`,
-          };
+          processedMessage = `${patientName} sent booking request to Dr. ${doctorName}`;
         } else if (notification.type === "booking_rejected") {
-          return {
-            ...notification,
-            message: `Booking rejected by Dr. ${notification.doctor_name} for ${notification.date}`,
-          };
-        } else if (notification.type === "appointment_reminder") {
-          return {
-            ...notification,
-            message: `Reminder: Appointment with Dr. ${notification.doctor_name} tomorrow at ${notification.time}`,
-          };
+          processedMessage = `Dr. ${doctorName} rejected ${patientName}'s appointment request`;
         }
-        return notification;
+
+        return {
+          ...notification,
+          message: processedMessage,
+        };
       });
 
       setNotifications(processedNotifications);
@@ -123,7 +122,7 @@ const Notifications = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.status === 401) {
@@ -191,7 +190,7 @@ const Notifications = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentNotifications = notifications.slice(
     indexOfFirstItem,
-    indexOfLastItem
+    indexOfLastItem,
   );
   const totalPages = Math.ceil(notifications.length / itemsPerPage);
 
@@ -250,7 +249,7 @@ const Notifications = () => {
                   <Avatar
                     sx={{
                       bgcolor: `${getNotificationColor(
-                        notification.type
+                        notification.type,
                       )}.main`,
                     }}
                   >

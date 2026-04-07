@@ -33,13 +33,25 @@ const getAuthToken = () => {
 const DoctorDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Hardcoded specializations - matching Django backend Doctor model SPECIALIZATION_CHOICES
+  const SPECIALIZATION_CHOICES = [
+    { id: 1, name: "General" },
+    { id: 2, name: "Lungs Specialist" },
+    { id: 3, name: "Dentist" },
+    { id: 4, name: "Psychiatrist" },
+    { id: 5, name: "Covid-19" },
+    { id: 6, name: "Surgeon" },
+    { id: 7, name: "Cardiologist" },
+  ];
+
   const [doctor, setDoctor] = useState(null);
-  const [specialties, setSpecialties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [form, setForm] = useState({
-    full_name: "",
+    first_name: "",
+    last_name: "",
     username: "",
     email: "",
     phone: "",
@@ -54,15 +66,30 @@ const DoctorDetails = () => {
     message: "",
   });
 
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const validatePhone = (phone) => /^[0-9]{10,15}$/.test(phone);
+  const validateEmail = (email) => {
+    if (!email) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone) return true;
+    return /^[0-9]{10,15}$/.test(phone);
+  };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!form.full_name.trim()) newErrors.full_name = "Full name is required";
-    if (!validateEmail(form.email)) newErrors.email = "Invalid email format";
-    if (form.phone && !validatePhone(form.phone))
+    // Specialization is required
+    if (!form.specialization) {
+      newErrors.specialization = "Specialization is required";
+    }
+    // Phone is required
+    if (!form.phone) {
+      newErrors.phone = "Phone is required";
+    } else if (!validatePhone(form.phone)) {
       newErrors.phone = "Invalid phone number (10-15 digits)";
+    }
+    if (form.email && !validateEmail(form.email))
+      newErrors.email = "Invalid email format";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -73,22 +100,17 @@ const DoctorDetails = () => {
       setError(null);
       const token = getAuthToken();
 
-      const [doctorRes, specialtiesRes] = await Promise.all([
-        fetch(`http://127.0.0.1:8000/api/doctor/doctors/${id}/`, {
+      const doctorRes = await fetch(
+        `http://127.0.0.1:8000/api/doctor/doctors/${id}/`,
+        {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }),
-        fetch("http://127.0.0.1:8000/api/admin/specialties/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }),
-      ]);
+        },
+      );
 
-      if (doctorRes.status === 401 || specialtiesRes.status === 401) {
+      if (doctorRes.status === 401) {
         setSnackbar({
           open: true,
           message: "Session expired. Please login again.",
@@ -99,12 +121,13 @@ const DoctorDetails = () => {
       }
 
       const doctorData = await doctorRes.json();
-      const specialtiesData = await specialtiesRes.json();
 
       setDoctor(doctorData);
-      setSpecialties(specialtiesData);
+      const firstName = doctorData.user?.first_name || "";
+      const lastName = doctorData.user?.last_name || "";
       setForm({
-        full_name: doctorData.full_name || "",
+        first_name: firstName,
+        last_name: lastName,
         username: doctorData.user?.username || "",
         email: doctorData.user?.email || "",
         phone: doctorData.phone || "",
@@ -146,9 +169,10 @@ const DoctorDetails = () => {
       };
 
       const requestData = {
-        full_name: form.full_name,
         user: {
           username: form.username,
+          first_name: form.first_name,
+          last_name: form.last_name,
           email: form.email,
         },
         specialization: form.specialization,
@@ -157,11 +181,16 @@ const DoctorDetails = () => {
         address: form.address,
       };
 
+      console.log("Sending request data:", requestData);
+
       const response = await fetch(url, {
         method: "PUT",
         headers,
         body: JSON.stringify(requestData),
       });
+
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -173,7 +202,9 @@ const DoctorDetails = () => {
           navigate("/admin/login");
           return;
         }
-        throw new Error("Failed to update doctor");
+        // Log detailed error info
+        console.error("Backend error:", responseData);
+        throw new Error(JSON.stringify(responseData));
       }
 
       fetchDoctorDetails();
@@ -184,9 +215,10 @@ const DoctorDetails = () => {
         severity: "success",
       });
     } catch (error) {
+      console.error("Error details:", error.message);
       setSnackbar({
         open: true,
-        message: "Failed to update doctor",
+        message: `Failed to update doctor: ${error.message}`,
         severity: "error",
       });
     }
@@ -194,7 +226,9 @@ const DoctorDetails = () => {
 
   const getSpecialtyName = (specialization) => {
     if (!specialization) return "Without specialization";
-    const specialty = specialties.find((s) => s.name === specialization);
+    const specialty = SPECIALIZATION_CHOICES.find(
+      (s) => s.name === specialization,
+    );
     return specialty
       ? specialty.name
       : specialization || "Without specialization";
@@ -326,16 +360,28 @@ const DoctorDetails = () => {
       >
         <DialogTitle>Edit Doctor</DialogTitle>
         <DialogContent>
-          <TextField
-            label="Full Name *"
-            name="full_name"
-            value={form.full_name}
-            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-            error={!!errors.full_name}
-            helperText={errors.full_name}
-            fullWidth
-            margin="normal"
-          />
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField
+              label="First Name"
+              name="first_name"
+              value={form.first_name}
+              onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+              error={!!errors.first_name}
+              helperText={errors.first_name}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              label="Last Name"
+              name="last_name"
+              value={form.last_name}
+              onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              error={!!errors.last_name}
+              helperText={errors.last_name}
+              fullWidth
+              margin="normal"
+            />
+          </Box>
           <TextField
             label="Username"
             name="username"
@@ -346,7 +392,7 @@ const DoctorDetails = () => {
             disabled
           />
           <TextField
-            label="Email *"
+            label="Email"
             name="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -356,7 +402,7 @@ const DoctorDetails = () => {
             margin="normal"
           />
           <TextField
-            label="Phone"
+            label="Phone *"
             name="phone"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -365,22 +411,31 @@ const DoctorDetails = () => {
             fullWidth
             margin="normal"
           />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Specialty</InputLabel>
+          <FormControl
+            fullWidth
+            margin="normal"
+            error={!!errors.specialization}
+          >
+            <InputLabel>Specialty *</InputLabel>
             <Select
               value={form.specialization}
               onChange={(e) =>
                 setForm({ ...form, specialization: e.target.value })
               }
-              label="Specialty"
+              label="Specialty *"
             >
-              <MenuItem value="">Without specialization</MenuItem>
-              {specialties.map((spec) => (
+              <MenuItem value="">Select a specialty</MenuItem>
+              {SPECIALIZATION_CHOICES.map((spec) => (
                 <MenuItem key={spec.id} value={spec.name}>
                   {spec.name}
                 </MenuItem>
               ))}
             </Select>
+            {errors.specialization && (
+              <Box sx={{ color: "#d32f2f", fontSize: "0.75rem", mt: 0.5 }}>
+                {errors.specialization}
+              </Box>
+            )}
           </FormControl>
           <TextField
             label="Bio"

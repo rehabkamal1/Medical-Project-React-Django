@@ -45,13 +45,13 @@ export default function AdminPatientApproval() {
     const token = getAuthToken();
     return {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     };
   };
 
   const fetchPatients = async () => {
     try {
-      setLoading(prev => ({...prev, general: true}));
+      setLoading((prev) => ({ ...prev, general: true }));
       const response = await axios.get(`${API_URL}/`, {
         headers: getAuthHeaders(),
       });
@@ -59,13 +59,13 @@ export default function AdminPatientApproval() {
     } catch (error) {
       handleApiError(error, "Failed to fetch patients");
     } finally {
-      setLoading(prev => ({...prev, general: false}));
+      setLoading((prev) => ({ ...prev, general: false }));
     }
   };
 
   const handleApiError = (error, defaultMessage) => {
     console.error("API Error:", error);
-    
+
     let errorMessage = defaultMessage;
     if (error.response) {
       if (error.response.status === 403) {
@@ -97,15 +97,22 @@ export default function AdminPatientApproval() {
 
   const handleApprovePatient = async (id) => {
     try {
-      setLoading(prev => ({...prev, approve: true}));
+      setLoading((prev) => ({ ...prev, approve: true }));
       const response = await axios.post(
         `${API_URL}/${id}/approve/`,
         {},
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
       );
-      
+
       if (response.status === 200) {
-        await fetchPatients();
+        // Update the patient in the state directly
+        setPatients(
+          patients.map((pat) =>
+            pat.id === id
+              ? { ...pat, is_approved: true, is_blocked: false }
+              : pat,
+          ),
+        );
         setSnackbar({
           open: true,
           message: "Patient approved successfully",
@@ -115,21 +122,28 @@ export default function AdminPatientApproval() {
     } catch (error) {
       handleApiError(error, "Failed to approve patient");
     } finally {
-      setLoading(prev => ({...prev, approve: false}));
+      setLoading((prev) => ({ ...prev, approve: false }));
     }
   };
 
   const handleBlockPatient = async (id) => {
     try {
-      setLoading(prev => ({...prev, block: true}));
+      setLoading((prev) => ({ ...prev, block: true }));
       const response = await axios.post(
         `${API_URL}/${id}/block/`,
         {},
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
       );
-      
+
       if (response.status === 200) {
-        await fetchPatients();
+        // Update the patient in the state directly
+        setPatients(
+          patients.map((pat) =>
+            pat.id === id
+              ? { ...pat, is_blocked: true, is_approved: false }
+              : pat,
+          ),
+        );
         setSnackbar({
           open: true,
           message: "Patient blocked successfully",
@@ -139,21 +153,26 @@ export default function AdminPatientApproval() {
     } catch (error) {
       handleApiError(error, "Failed to block patient");
     } finally {
-      setLoading(prev => ({...prev, block: false}));
+      setLoading((prev) => ({ ...prev, block: false }));
     }
   };
 
   const handleUnblockPatient = async (id) => {
     try {
-      setLoading(prev => ({...prev, unblock: true}));
+      setLoading((prev) => ({ ...prev, unblock: true }));
       const response = await axios.post(
         `${API_URL}/${id}/unblock/`,
         {},
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders() },
       );
-      
+
       if (response.status === 200) {
-        await fetchPatients();
+        // Update the patient in the state directly
+        setPatients(
+          patients.map((pat) =>
+            pat.id === id ? { ...pat, is_blocked: false } : pat,
+          ),
+        );
         setSnackbar({
           open: true,
           message: "Patient unblocked successfully",
@@ -163,7 +182,7 @@ export default function AdminPatientApproval() {
     } catch (error) {
       handleApiError(error, "Failed to unblock patient");
     } finally {
-      setLoading(prev => ({...prev, unblock: false}));
+      setLoading((prev) => ({ ...prev, unblock: false }));
     }
   };
 
@@ -225,15 +244,15 @@ export default function AdminPatientApproval() {
                           patient.is_blocked
                             ? "Blocked"
                             : patient.is_approved
-                            ? "Approved"
-                            : "Pending"
+                              ? "Approved"
+                              : "Pending"
                         }
                         color={
                           patient.is_blocked
                             ? "error"
                             : patient.is_approved
-                            ? "success"
-                            : "warning"
+                              ? "success"
+                              : "warning"
                         }
                       />
                     </TableCell>
@@ -245,7 +264,9 @@ export default function AdminPatientApproval() {
                           size="small"
                           onClick={() => handleApprovePatient(patient.id)}
                           disabled={loading.approve}
-                          startIcon={loading.approve && <CircularProgress size={20} />}
+                          startIcon={
+                            loading.approve && <CircularProgress size={20} />
+                          }
                           sx={{ mr: 1 }}
                         >
                           Approve
@@ -258,7 +279,9 @@ export default function AdminPatientApproval() {
                           size="small"
                           onClick={() => handleBlockPatient(patient.id)}
                           disabled={loading.block}
-                          startIcon={loading.block && <CircularProgress size={20} />}
+                          startIcon={
+                            loading.block && <CircularProgress size={20} />
+                          }
                         >
                           Block
                         </Button>
@@ -270,7 +293,9 @@ export default function AdminPatientApproval() {
                           size="small"
                           onClick={() => handleUnblockPatient(patient.id)}
                           disabled={loading.unblock}
-                          startIcon={loading.unblock && <CircularProgress size={20} />}
+                          startIcon={
+                            loading.unblock && <CircularProgress size={20} />
+                          }
                         >
                           Unblock
                         </Button>
@@ -302,10 +327,10 @@ export default function AdminPatientApproval() {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
+        <Alert
+          onClose={handleSnackbarClose}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>

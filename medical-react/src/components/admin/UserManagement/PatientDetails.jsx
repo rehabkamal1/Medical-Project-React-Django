@@ -50,7 +50,8 @@ const PatientDetails = () => {
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [form, setForm] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     date_of_birth: "",
@@ -66,17 +67,22 @@ const PatientDetails = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const validatePhone = (phone) => /^[0-9]{10,15}$/.test(phone);
+  const validateEmail = (email) => {
+    if (!email) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone) return true;
+    return /^[0-9]{10,15}$/.test(phone);
+  };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Name is required";
-    if (!validateEmail(form.email)) newErrors.email = "Invalid email format";
-    if (!validatePhone(form.phone)) newErrors.phone = "Invalid phone number";
-    if (!form.date_of_birth)
-      newErrors.date_of_birth = "Date of birth is required";
-    if (!form.address.trim()) newErrors.address = "Address is required";
+    if (form.email && !validateEmail(form.email))
+      newErrors.email = "Invalid email format";
+    if (form.phone && !validatePhone(form.phone))
+      newErrors.phone = "Invalid phone number";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -134,7 +140,7 @@ const PatientDetails = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -152,12 +158,15 @@ const PatientDetails = () => {
 
       const data = await response.json();
       setPatient(data);
+      const firstName = data.user?.first_name || data.first_name || "";
+      const lastName = data.user?.last_name || data.last_name || "";
       setForm({
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        date_of_birth: data.date_of_birth,
-        address: data.address,
+        first_name: firstName,
+        last_name: lastName,
+        email: data.email || data.user?.email || "",
+        phone: data.phone || "",
+        date_of_birth: data.date_of_birth || "",
+        address: data.address || "",
       });
     } catch (error) {
       setError(error.message);
@@ -190,7 +199,7 @@ const PatientDetails = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ [field]: value }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -236,7 +245,7 @@ const PatientDetails = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(form),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -295,7 +304,7 @@ const PatientDetails = () => {
   };
 
   const filteredPatients = patients.filter((patient) => {
-    const patientName = patient?.name || '';
+    const patientName = patient?.name || "";
     const searchTermLower = searchTerm.toLowerCase();
     return patientName.toLowerCase().includes(searchTermLower);
   });
@@ -410,9 +419,7 @@ const PatientDetails = () => {
                                   }}
                                 >
                                   <EventIcon fontSize="small" />
-                                  {formatDate(
-                                    patient.date_of_birth
-                                  )}
+                                  {formatDate(patient.date_of_birth)}
                                 </Box>
                               }
                             />
@@ -551,18 +558,30 @@ const PatientDetails = () => {
       >
         <DialogTitle>Edit Patient</DialogTitle>
         <DialogContent>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField
+              label="First Name"
+              name="first_name"
+              value={form.first_name}
+              onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+              error={!!errors.first_name}
+              helperText={errors.first_name}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              label="Last Name"
+              name="last_name"
+              value={form.last_name}
+              onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              error={!!errors.last_name}
+              helperText={errors.last_name}
+              fullWidth
+              margin="normal"
+            />
+          </Box>
           <TextField
-            label="Full Name *"
-            name="name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            error={!!errors.name}
-            helperText={errors.name || "At least 3 characters"}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="Email *"
+            label="Email"
             name="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -572,7 +591,7 @@ const PatientDetails = () => {
             margin="normal"
           />
           <TextField
-            label="Phone *"
+            label="Phone"
             name="phone"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -587,7 +606,7 @@ const PatientDetails = () => {
             }}
           />
           <TextField
-            label="Date of Birth *"
+            label="Date of Birth"
             name="date_of_birth"
             type="date"
             value={form.date_of_birth}
@@ -603,12 +622,12 @@ const PatientDetails = () => {
             }}
           />
           <TextField
-            label="Address *"
+            label="Address"
             name="address"
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
             error={!!errors.address}
-            helperText={errors.address || "At least 10 characters"}
+            helperText={errors.address}
             fullWidth
             margin="normal"
             multiline
