@@ -262,3 +262,11 @@ class AppointmentSerializer(serializers.ModelSerializer):
         
     def get_time(self, obj):
         return obj.date.strftime('%H:%M') if obj.date else ''
+    
+    def create(self, validated_data):
+        # Ensure patient_name is populated from patient object
+        appointment = Appointment(**validated_data)
+        if appointment.patient:
+            appointment.patient_name = appointment.patient.user.get_full_name() or appointment.patient.user.username
+        appointment.save()
+        return appointment

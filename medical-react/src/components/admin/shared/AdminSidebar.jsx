@@ -30,7 +30,7 @@ const AdminSidebar = ({ drawerWidth = 240, mobileOpen, onDrawerToggle }) => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/login");
+    navigate("/");
   };
 
   const menuItems = [

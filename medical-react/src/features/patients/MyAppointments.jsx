@@ -214,7 +214,8 @@ const MyAppointments = () => {
             <Typography>Time: {appt.time}</Typography>
             <Chip
               label={appt.status}
-              color={statusColors[appt.status]}
+              color={statusColors[appt.status] || "default"}
+              variant="outlined"
               sx={{ mt: 1 }}
             />
             <Box mt={1}>

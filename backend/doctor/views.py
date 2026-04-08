@@ -27,7 +27,7 @@ class IsDoctor(permissions.BasePermission):
 
 class IsDoctorOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (request.user.role == 'doctor' and  request.user.role == 'admin')
+        return request.user.is_authenticated and (request.user.role == 'doctor' or request.user.role == 'admin')
 
 class DoctorViewSet(viewsets.ModelViewSet):
     queryset = Doctor.objects.all()

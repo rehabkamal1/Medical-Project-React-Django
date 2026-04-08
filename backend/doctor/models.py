@@ -81,6 +81,13 @@ class Appointment(models.Model):
         ('rejected', 'Rejected')
     ], default='pending')
     notes = models.TextField(blank=True)
+    patient_name = models.CharField(max_length=255, blank=True, default='')
+
+    def save(self, *args, **kwargs):
+        # Auto-populate patient_name from patient object if not set
+        if not self.patient_name and self.patient:
+            self.patient_name = self.patient.user.get_full_name() or self.patient.user.username
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.patient.user.get_full_name()} - {self.date} - {self.status}"
