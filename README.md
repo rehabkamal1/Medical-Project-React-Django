@@ -74,3 +74,4 @@ python manage.py runserver
 
 https://github.com/user-attachments/assets/719d0f70-d6a7-4f37-ab29-bdc155497df9
 
+# Medical-Project-React-Django
