@@ -249,7 +249,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
         read_only_fields = ['patient_name', 'patient_id', 'time', 'patient', 'status']  # ✅ هنا
 
     def get_patient_name(self, obj):
-        return obj.patient.user.get_full_name() if obj.patient and obj.patient.user else ''
+        if obj.patient and obj.patient.user:
+            full_name = obj.patient.user.get_full_name().strip()
+            return full_name if full_name else obj.patient.user.username
+        return ''
 
     def get_patient_id(self, obj):
         return obj.patient.id if obj.patient else None
@@ -266,7 +269,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Ensure patient_name is populated from patient object
         appointment = Appointment(**validated_data)
-        if appointment.patient:
-            appointment.patient_name = appointment.patient.user.get_full_name() or appointment.patient.user.username
+        if appointment.patient and appointment.patient.user:
+            full_name = appointment.patient.user.get_full_name().strip()
+            appointment.patient_name = full_name if full_name else appointment.patient.user.username
         appointment.save()
         return appointment

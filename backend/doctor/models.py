@@ -85,8 +85,9 @@ class Appointment(models.Model):
 
     def save(self, *args, **kwargs):
         # Auto-populate patient_name from patient object if not set
-        if not self.patient_name and self.patient:
-            self.patient_name = self.patient.user.get_full_name() or self.patient.user.username
+        if not self.patient_name and self.patient and self.patient.user:
+            full_name = self.patient.user.get_full_name().strip()
+            self.patient_name = full_name if full_name else self.patient.user.username
         super().save(*args, **kwargs)
 
     def __str__(self):
